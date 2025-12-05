@@ -37,7 +37,7 @@ import { NewPatientForm } from './NewPatientForm';
 import { OrdonnanceForm } from './OrdonnanceForm';
 import { CertificatForm } from './CertificatForm';
 import type { User } from '../App';
-const logo = '/placeholder.png';
+const logo = '/doctor-logo.svg';
 
 interface DashboardMedecinProps {
   user: User;

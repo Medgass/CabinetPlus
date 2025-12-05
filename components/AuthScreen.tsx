@@ -4,7 +4,7 @@ import { LoginForm } from './LoginForm';
 import { SignupForm } from './SignupForm';
 import { ResetPasswordForm } from './ResetPasswordForm';
 import type { User } from '../App';
-const logo = '/placeholder.png';
+const logo = '/doctor-logo.svg';
 
 interface AuthScreenProps {
   onLogin: (user: User) => void;

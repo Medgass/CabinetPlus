@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   Calendar,
@@ -10,6 +10,7 @@ import {
   Search,
   Bell,
   CheckCircle,
+  X,
 } from "lucide-react";
 import { Button } from "./ui/button";
 import {
@@ -20,8 +21,18 @@ import {
 } from "./ui/card";
 import { Input } from "./ui/input";
 import { Badge } from "./ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogClose,
+} from "./ui/dialog";
+import { Label } from "./ui/label";
+import { Textarea } from "./ui/textarea";
 import type { User } from "../App";
-const logo = "/placeholder.png";
+const logo = "/doctor-logo.svg";
 
 interface DashboardSecretaireProps {
   user: User;
@@ -33,6 +44,21 @@ export function DashboardSecretaire({
   onLogout,
 }: DashboardSecretaireProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [showNewRDV, setShowNewRDV] = useState(false);
+  const [newRDV, setNewRDV] = useState({
+    patient: "",
+    telephone: "",
+    email: "",
+    date: "",
+    heure: "",
+    motif: "",
+  });
+  const formValid = Boolean(newRDV.patient.trim() && newRDV.date && newRDV.heure);
+  const [selectedRDV, setSelectedRDV] = useState<any>(null);
+  const [showRDVDetails, setShowRDVDetails] = useState(false);
+  const [showCallDialog, setShowCallDialog] = useState(false);
+  const [showMessageDialog, setShowMessageDialog] = useState(false);
+  const [messageText, setMessageText] = useState("");
 
   const statsSecretaire = [
     {
@@ -61,7 +87,7 @@ export function DashboardSecretaire({
     },
   ];
 
-  const rendezvousAujourdhui = [
+  const defaultRendezvous = [
     {
       heure: "08:30",
       patient: "Sophie Lebrun",
@@ -93,6 +119,23 @@ export function DashboardSecretaire({
       telephone: "06 56 78 90 12",
     },
   ];
+
+  const [rendezvousAujourdhui, setRendezvousAujourdhui] = useState(() => {
+    try {
+      const fromStorage = localStorage.getItem("rendezvousAujourdhui");
+      return fromStorage ? JSON.parse(fromStorage) : defaultRendezvous;
+    } catch (e) {
+      return defaultRendezvous;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("rendezvousAujourdhui", JSON.stringify(rendezvousAujourdhui));
+    } catch (e) {
+      // ignore
+    }
+  }, [rendezvousAujourdhui]);
 
   const tachesUrgentes = [
     {
@@ -224,7 +267,11 @@ export function DashboardSecretaire({
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.3 + index * 0.05 }}
-                      className="flex items-center gap-4 p-4 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors"
+                      className="flex items-center gap-4 p-4 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
+                      onClick={() => {
+                        setSelectedRDV(rdv);
+                        setShowRDVDetails(true);
+                      }}
                     >
                       <div className="w-16 text-center">
                         <p className="text-green-600">
@@ -263,6 +310,67 @@ export function DashboardSecretaire({
             </Card>
           </motion.div>
 
+          {/* RDV Details Dialog */}
+          <Dialog open={showRDVDetails} onOpenChange={setShowRDVDetails}>
+            <DialogContent className="max-w-md bg-white dark:bg-slate-900">
+              <DialogHeader>
+                <DialogTitle>Détails du rendez-vous</DialogTitle>
+              </DialogHeader>
+              {selectedRDV ? (
+                <div className="space-y-3 pt-2">
+                  <p className="text-sm text-slate-500">Heure: <strong className="text-slate-900">{selectedRDV.heure}</strong></p>
+                  <p className="text-sm text-slate-500">Patient: <strong className="text-slate-900">{selectedRDV.patient}</strong></p>
+                  <p className="text-sm text-slate-500">Téléphone: <strong className="text-slate-900">{selectedRDV.telephone}</strong></p>
+                  <p className="text-sm text-slate-500">Statut: <Badge variant={selectedRDV.statut === 'confirmé' ? 'default' : 'secondary'}>{selectedRDV.statut}</Badge></p>
+                  <div className="flex gap-2 pt-3">
+                    <Button onClick={() => { setShowRDVDetails(false); setShowCallDialog(true); }} className="flex-1 justify-center">Passer un appel</Button>
+                    <Button onClick={() => { setShowRDVDetails(false); setShowMessageDialog(true); setMessageText(`Bonjour ${selectedRDV.patient}, `); }} className="flex-1 justify-center" variant="outline">Envoyer un message</Button>
+                  </div>
+                </div>
+              ) : (
+                <p>Aucun rendez-vous sélectionné.</p>
+              )}
+            </DialogContent>
+          </Dialog>
+
+          {/* Call Dialog */}
+          <Dialog open={showCallDialog} onOpenChange={setShowCallDialog}>
+            <DialogContent className="max-w-md bg-white dark:bg-slate-900">
+              <DialogHeader>
+                <DialogTitle>Passer un appel</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 pt-2">
+                <p className="text-sm">Appeler:</p>
+                <p className="text-lg font-medium">{selectedRDV?.patient ?? '—'}</p>
+                <p className="text-sm text-slate-700">{selectedRDV?.telephone ?? '—'}</p>
+                <div className="flex gap-3 justify-end">
+                  <Button variant="outline" onClick={() => setShowCallDialog(false)}>Annuler</Button>
+                  <a className="no-underline" href={`tel:${selectedRDV?.telephone ?? ''}`}>
+                    <Button onClick={() => { console.log('Calling', selectedRDV); setShowCallDialog(false); }}>Appeler</Button>
+                  </a>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Message Dialog */}
+          <Dialog open={showMessageDialog} onOpenChange={setShowMessageDialog}>
+            <DialogContent className="max-w-md bg-white dark:bg-slate-900">
+              <DialogHeader>
+                <DialogTitle>Envoyer un message</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-3 pt-2">
+                <p className="text-sm">À: <strong>{selectedRDV?.patient ?? '—'}</strong></p>
+                <p className="text-sm text-slate-700">{selectedRDV?.telephone ?? ''}</p>
+                <Textarea value={messageText} onChange={(e) => setMessageText(e.target.value)} className="mt-1 min-h-[100px]" />
+                <div className="flex gap-3 justify-end">
+                  <Button variant="outline" onClick={() => setShowMessageDialog(false)}>Annuler</Button>
+                  <Button onClick={() => { console.log('Message sent to', selectedRDV, messageText); setShowMessageDialog(false); setMessageText(''); }}>Envoyer</Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+
           {/* Sidebar */}
           <motion.div
             initial={{ opacity: 0, x: 20 }}
@@ -276,10 +384,135 @@ export function DashboardSecretaire({
                 <CardTitle>Actions rapides</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                <Button className="w-full justify-start bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700">
-                  <UserPlus className="w-4 h-4 mr-2" />
-                  Nouveau rendez-vous
-                </Button>
+                <Dialog open={showNewRDV} onOpenChange={setShowNewRDV}>
+                  <DialogTrigger asChild>
+                    <Button className="w-full justify-start bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700">
+                      <UserPlus className="w-4 h-4 mr-2" />
+                      Nouveau rendez-vous
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-2xl bg-white dark:bg-slate-900">
+                    <DialogHeader>
+                      <DialogTitle>Créer un nouveau rendez-vous</DialogTitle>
+                    </DialogHeader>
+                    <form className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <div className="sm:col-span-2 grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="patient">Nom du patient</Label>
+                          <Input
+                            id="patient"
+                            placeholder="Nom et prénom"
+                            value={newRDV.patient}
+                            onChange={(e) =>
+                              setNewRDV({ ...newRDV, patient: e.target.value })
+                            }
+                            className="mt-1"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="telephone">Téléphone</Label>
+                          <Input
+                            id="telephone"
+                            placeholder="06 12 34 56 78"
+                            value={newRDV.telephone}
+                            onChange={(e) =>
+                              setNewRDV({ ...newRDV, telephone: e.target.value })
+                            }
+                            className="mt-1"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="sm:col-span-2">
+                        <Label htmlFor="email">Email (optionnel)</Label>
+                        <Input
+                          id="email"
+                          type="email"
+                          placeholder="patient@example.com"
+                          value={newRDV.email}
+                          onChange={(e) =>
+                            setNewRDV({ ...newRDV, email: e.target.value })
+                          }
+                          className="mt-1"
+                        />
+                        <p className="text-xs text-slate-500 mt-1">
+                          L'email est facultatif mais utile pour envoyer une confirmation.
+                        </p>
+                      </div>
+
+                      <div>
+                        <Label htmlFor="date">Date</Label>
+                        <Input
+                          id="date"
+                          type="date"
+                          value={newRDV.date}
+                          onChange={(e) =>
+                            setNewRDV({ ...newRDV, date: e.target.value })
+                          }
+                          className="mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="heure">Heure</Label>
+                        <Input
+                          id="heure"
+                          type="time"
+                          value={newRDV.heure}
+                          onChange={(e) =>
+                            setNewRDV({ ...newRDV, heure: e.target.value })
+                          }
+                          className="mt-1"
+                        />
+                      </div>
+
+                      <div className="sm:col-span-2">
+                        <Label htmlFor="motif">Motif</Label>
+                        <Textarea
+                          id="motif"
+                          placeholder="Ex: consultation générale, suivi, vaccin..."
+                          value={newRDV.motif}
+                          onChange={(e) =>
+                            setNewRDV({ ...newRDV, motif: e.target.value })
+                          }
+                          className="mt-1 min-h-[100px]"
+                        />
+                      </div>
+
+                      <div className="sm:col-span-2 flex items-center justify-end gap-3">
+                        <Button variant="outline" onClick={() => setShowNewRDV(false)}>
+                          Annuler
+                        </Button>
+                        <Button
+                          className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700"
+                          disabled={!formValid}
+                          onClick={() => {
+                            const rdvToAdd = {
+                              heure: newRDV.heure || "--:--",
+                              patient: newRDV.patient,
+                              statut: "en attente",
+                              telephone: newRDV.telephone || "",
+                              email: newRDV.email || "",
+                              date: newRDV.date || "",
+                              motif: newRDV.motif || "",
+                            };
+                            setRendezvousAujourdhui((prev: any[]) => [rdvToAdd, ...prev]);
+                            setShowNewRDV(false);
+                            setNewRDV({
+                              patient: "",
+                              telephone: "",
+                              email: "",
+                              date: "",
+                              heure: "",
+                              motif: "",
+                            });
+                          }}
+                        >
+                          Créer
+                        </Button>
+                      </div>
+                    </form>
+                  </DialogContent>
+                </Dialog>
                 <Button
                   className="w-full justify-start"
                   variant="outline"

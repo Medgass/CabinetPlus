@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Eye, EyeOff, Mail, Lock, Fingerprint, LogIn } from 'lucide-react';
 import { Button } from './ui/button';
@@ -6,6 +6,12 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Checkbox } from './ui/checkbox';
 import { toast } from 'sonner';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from './ui/dialog';
 import type { User, UserRole } from '../App';
 
 interface LoginFormProps {
@@ -76,8 +82,69 @@ export function LoginForm({ onLogin, onNavigateSignup, onNavigateReset }: LoginF
     }
   };
 
+  const [showFaceAuth, setShowFaceAuth] = useState(false);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+
   const handleBiometricAuth = () => {
-    toast.info('Authentification biométrique non disponible sur le web. Utilisez les identifiants de démonstration.');
+    // Only allow the fake face-auth flow on localhost for development convenience
+    const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
+    const isLocal = hostname === 'localhost' || hostname === '127.0.0.1';
+    if (!isLocal) {
+      toast.error('La reconnaissance faciale de test est disponible uniquement en développement (localhost).');
+      return;
+    }
+    setShowFaceAuth(true);
+  };
+
+  useEffect(() => {
+    if (!showFaceAuth) {
+      // stop stream when modal closed
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(t => t.stop());
+        streamRef.current = null;
+      }
+      return;
+    }
+
+    const startCamera = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        streamRef.current = stream;
+        if (videoRef.current) videoRef.current.srcObject = stream;
+      } catch (err) {
+        toast.error('Impossible d\'accéder à la caméra. Vérifiez les permissions.');
+        setShowFaceAuth(false);
+      }
+    };
+
+    startCamera();
+
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(t => t.stop());
+        streamRef.current = null;
+      }
+    };
+  }, [showFaceAuth]);
+
+  const handleFaceScan = async () => {
+    // Simulate recognition delay
+    toast.info('Analyse du visage en cours...');
+    await new Promise((r) => setTimeout(r, 900));
+    const med = DEMO_USERS.find(u => u.role === 'medecin');
+    if (med) {
+      // Close camera
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(t => t.stop());
+        streamRef.current = null;
+      }
+      setShowFaceAuth(false);
+      toast.success(`Authentification réussie — Dr. ${med.prenom}`);
+      onLogin({ id: med.id, nom: med.nom, prenom: med.prenom, email: med.email, role: med.role });
+    } else {
+      toast.error("Compte médecin introuvable.");
+    }
   };
 
   const fillDemoCredentials = (role: UserRole) => {
@@ -185,8 +252,27 @@ export function LoginForm({ onLogin, onNavigateSignup, onNavigateReset }: LoginF
           onClick={handleBiometricAuth}
         >
           <Fingerprint className="w-5 h-5 mr-2" />
-          Authentification biométrique
+          Reconnaissance faciale (DEV)
         </Button>
+
+        {/* Face Auth Modal (dev-only) */}
+        <Dialog open={showFaceAuth} onOpenChange={setShowFaceAuth}>
+          <DialogContent className="max-w-md bg-white dark:bg-slate-900">
+            <DialogHeader>
+              <DialogTitle>Reconnaissance faciale (mode développement)</DialogTitle>
+            </DialogHeader>
+            <div className="pt-2 space-y-3">
+              <p className="text-sm text-slate-500">Cette fonctionnalité est uniquement pour le développement local. Elle accepte n'importe quel visage pour se connecter en tant que médecin de démonstration.</p>
+              <div className="w-full bg-black/5 rounded overflow-hidden">
+                <video ref={videoRef} autoPlay playsInline className="w-full h-48 object-cover bg-black" />
+              </div>
+              <div className="flex gap-3 justify-end">
+                <Button variant="outline" onClick={() => setShowFaceAuth(false)}>Fermer</Button>
+                <Button onClick={handleFaceScan}>Scanner et connecter</Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* Demo Accounts */}
         <div className="pt-4 border-t">
