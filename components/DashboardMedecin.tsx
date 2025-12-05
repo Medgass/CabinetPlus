@@ -31,7 +31,6 @@ import { Input } from './ui/input';
 import { Badge } from './ui/badge';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { ImageWithFallback } from './figma/ImageWithFallback';
 import { PatientDetail } from './PatientDetail';
 import { ConsultationForm } from './ConsultationForm';
 import { NewPatientForm } from './NewPatientForm';
@@ -192,7 +191,7 @@ export function DashboardMedecin({ user, onLogout }: DashboardMedecinProps) {
       >
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <ImageWithFallback 
+            <img 
               src={logo} 
               alt="CabinetPlus Logo" 
               className="h-8 md:h-10 w-auto"

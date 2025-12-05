@@ -3,7 +3,6 @@ import { motion } from 'framer-motion';
 import { LoginForm } from './LoginForm';
 import { SignupForm } from './SignupForm';
 import { ResetPasswordForm } from './ResetPasswordForm';
-import { ImageWithFallback } from './figma/ImageWithFallback';
 import type { User } from '../App';
 const logo = '/placeholder.png';
 
@@ -25,7 +24,7 @@ export function AuthScreen({ onLogin }: AuthScreenProps) {
         className="pt-12 pb-8 px-6 text-center"
       >
         <div className="flex items-center justify-center gap-2 mb-3">
-          <ImageWithFallback 
+          <img 
             src={logo} 
             alt="CabinetPlus Logo" 
             className="h-16 w-auto"
