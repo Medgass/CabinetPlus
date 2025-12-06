@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  Calendar, 
-  FileText, 
-  Bell, 
-  User, 
+import {
+  Calendar,
+  FileText,
+  Bell,
+  User,
   LogOut,
   Clock,
   MapPin,
@@ -24,39 +24,40 @@ interface DashboardPatientProps {
   onLogout: () => void;
 }
 
+const notifications = [
+  { message: "Rappel: RDV demain à 14:30", type: "rappel" },
+  { message: "Résultats d'analyses disponibles", type: "info" },
+  { message: "Nouvelle ordonnance disponible", type: "nouveau" }
+];
+
+const ordonnancesEnCours = [
+  { medicament: 'Doliprane 1000mg', posologie: '1 comprimé 3x/jour', validite: '15 jours restants' },
+  { medicament: 'Amoxicilline 500mg', posologie: '1 gélule 2x/jour', validite: '3 jours restants' }
+];
+
+const historique = [
+  { date: '15 nov 2025', type: 'Consultation', medecin: 'Dr. Durand' },
+  { date: '02 oct 2025', type: 'Analyses sanguines', medecin: 'Laboratoire Central' },
+  { date: '18 sept 2025', type: 'Consultation', medecin: 'Dr. Durand' }
+];
+
+const prochainRendezVous = {
+  date: '28 novembre 2025',
+  heure: '14:30',
+  medecin: 'Dr. Sophie Durand',
+  specialite: 'Médecin généraliste',
+  adresse: '15 Rue de la Santé, 75014 Paris',
+  motif: 'Consultation de suivi'
+};
+
 export function DashboardPatient({ user, onLogout }: DashboardPatientProps) {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const patientNotifications = notifications;
-  const prochainRendezVous = {
-    date: '28 novembre 2025',
-    heure: '14:30',
-    medecin: 'Dr. Sophie Durand',
-    specialite: 'Médecin généraliste',
-    adresse: '15 Rue de la Santé, 75014 Paris',
-    motif: 'Consultation de suivi'
-  };
-
-  const ordonnancesEnCours = [
-    { medicament: 'Doliprane 1000mg', posologie: '1 comprimé 3x/jour', validite: '15 jours restants' },
-    { medicament: 'Amoxicilline 500mg', posologie: '1 gélule 2x/jour', validite: '3 jours restants' }
-  ];
-
-  const historique = [
-    { date: '15 nov 2025', type: 'Consultation', medecin: 'Dr. Durand' },
-    { date: '02 oct 2025', type: 'Analyses sanguines', medecin: 'Laboratoire Central' },
-    { date: '18 sept 2025', type: 'Consultation', medecin: 'Dr. Durand' }
-  ];
-
-  const notifications = [
-    { message: 'Rappel: RDV demain à 14:30', type: 'rappel' },
-    { message: 'Résultats d\'analyses disponibles', type: 'info' },
-    { message: 'Nouvelle ordonnance disponible', type: 'nouveau' }
-  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50">
       {/* Header */}
-      <motion.header 
+      <motion.header
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         className="bg-white border-b border-slate-200 px-6 py-4"
@@ -65,17 +66,25 @@ export function DashboardPatient({ user, onLogout }: DashboardPatientProps) {
           <div className="flex items-center gap-3">
             <Avatar className="w-12 h-12">
               <AvatarFallback className="bg-gradient-to-br from-purple-500 to-purple-600 text-white">
-                {user.prenom[0]}{user.nom[0]}
+                {user.prenom[0]}
+                {user.nom[0]}
               </AvatarFallback>
             </Avatar>
             <div>
-              <h2 className="text-slate-900">{user.prenom} {user.nom}</h2>
+              <h2 className="text-slate-900">
+                {user.prenom} {user.nom}
+              </h2>
               <p className="text-sm text-slate-600">Mon espace patient</p>
             </div>
           </div>
           <div className="flex items-center gap-2 relative">
             <div className="relative">
-              <Button variant="ghost" size="icon" className="relative" onClick={() => setNotificationsOpen(v => !v)}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="relative"
+                onClick={() => setNotificationsOpen(v => !v)}
+              >
                 <Bell className="w-5 h-5" />
                 <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
               </Button>
@@ -113,7 +122,9 @@ export function DashboardPatient({ user, onLogout }: DashboardPatientProps) {
               <div className="flex items-start justify-between mb-4">
                 <div>
                   <p className="text-purple-100 mb-1">Prochain rendez-vous</p>
-                  <h3 className="text-white mb-4">{prochainRendezVous.date} à {prochainRendezVous.heure}</h3>
+                  <h3 className="text-white mb-4">
+                    {prochainRendezVous.date} à {prochainRendezVous.heure}
+                  </h3>
                 </div>
                 <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
                   <Calendar className="w-6 h-6 text-white" />
@@ -122,7 +133,9 @@ export function DashboardPatient({ user, onLogout }: DashboardPatientProps) {
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <User className="w-4 h-4 text-purple-200" />
-                  <span className="text-purple-50">{prochainRendezVous.medecin} - {prochainRendezVous.specialite}</span>
+                  <span className="text-purple-50">
+                    {prochainRendezVous.medecin} - {prochainRendezVous.specialite}
+                  </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <MapPin className="w-4 h-4 text-purple-200" />
@@ -138,7 +151,10 @@ export function DashboardPatient({ user, onLogout }: DashboardPatientProps) {
                   <Phone className="w-4 h-4 mr-2" />
                   Appeler le cabinet
                 </Button>
-                <Button variant="outline" className="border-white/30 text-white hover:bg-white/10">
+                <Button
+                  variant="outline"
+                  className="border-white/30 text-white hover:bg-white/10"
+                >
                   Annuler
                 </Button>
               </div>
@@ -196,10 +212,11 @@ export function DashboardPatient({ user, onLogout }: DashboardPatientProps) {
               <CardContent>
                 <div className="space-y-3">
                   {historique.map((item, index) => (
-                    <div key={index} className="flex items-center gap-4 p-3 hover:bg-slate-50 rounded-lg transition-colors cursor-pointer">
-                      <div className="w-12 text-sm text-slate-600">
-                        {item.date}
-                      </div>
+                    <div
+                      key={index}
+                      className="flex items-center gap-4 p-3 hover:bg-slate-50 rounded-lg transition-colors cursor-pointer"
+                    >
+                      <div className="w-12 text-sm text-slate-600">{item.date}</div>
                       <div className="flex-1">
                         <p className="text-slate-900">{item.type}</p>
                         <p className="text-sm text-slate-600">{item.medecin}</p>
@@ -257,7 +274,10 @@ export function DashboardPatient({ user, onLogout }: DashboardPatientProps) {
               <CardContent>
                 <div className="space-y-3">
                   {notifications.map((notif, index) => (
-                    <div key={index} className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg">
+                    <div
+                      key={index}
+                      className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg"
+                    >
                       <div className="w-2 h-2 rounded-full bg-purple-500 mt-2" />
                       <p className="text-sm text-slate-700 flex-1">{notif.message}</p>
                     </div>
@@ -270,7 +290,7 @@ export function DashboardPatient({ user, onLogout }: DashboardPatientProps) {
       </div>
 
       {/* Bottom Navigation (Mobile) */}
-      <motion.nav 
+      <motion.nav
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-6 py-3 md:hidden"
@@ -282,7 +302,10 @@ export function DashboardPatient({ user, onLogout }: DashboardPatientProps) {
             { icon: FileText, label: 'Documents' },
             { icon: User, label: 'Profil' }
           ].map((item, index) => (
-            <button key={index} className="flex flex-col items-center gap-1 text-slate-600 hover:text-purple-600">
+            <button
+              key={index}
+              className="flex flex-col items-center gap-1 text-slate-600 hover:text-purple-600"
+            >
               <item.icon className="w-6 h-6" />
               <span className="text-xs">{item.label}</span>
             </button>
