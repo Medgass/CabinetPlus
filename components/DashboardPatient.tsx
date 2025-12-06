@@ -25,6 +25,8 @@ interface DashboardPatientProps {
 }
 
 export function DashboardPatient({ user, onLogout }: DashboardPatientProps) {
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const patientNotifications = notifications;
   const prochainRendezVous = {
     date: '28 novembre 2025',
     heure: '14:30',
@@ -71,11 +73,26 @@ export function DashboardPatient({ user, onLogout }: DashboardPatientProps) {
               <p className="text-sm text-slate-600">Mon espace patient</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="relative">
-              <Bell className="w-5 h-5" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
-            </Button>
+          <div className="flex items-center gap-2 relative">
+            <div className="relative">
+              <Button variant="ghost" size="icon" className="relative" onClick={() => setNotificationsOpen(v => !v)}>
+                <Bell className="w-5 h-5" />
+                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
+              </Button>
+              {notificationsOpen && (
+                <div className="absolute right-0 mt-2 w-72 bg-white border rounded-lg shadow-lg z-50 overflow-hidden">
+                  <div className="p-2 border-b text-sm font-medium">Notifications</div>
+                  <div className="max-h-64 overflow-auto">
+                    {patientNotifications.map((n, i) => (
+                      <div key={i} className="px-3 py-2 hover:bg-slate-50 cursor-default">
+                        <div className="text-sm text-slate-900">{n.message}</div>
+                        <div className="text-xs text-slate-500">{n.type}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
             <Button variant="ghost" onClick={onLogout}>
               <LogOut className="w-5 h-5" />
             </Button>

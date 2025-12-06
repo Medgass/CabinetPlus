@@ -48,10 +48,18 @@ export function DashboardMedecin({ user, onLogout }: DashboardMedecinProps) {
   const [activeTab, setActiveTab] = useState('accueil');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPatient, setSelectedPatient] = useState<any>(null);
+  const [showPatientDetail, setShowPatientDetail] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const notifications = [
+    { id: 1, title: 'Nouveau message de la secrétaire', time: 'Il y a 5m' },
+    { id: 2, title: 'RDV confirmé: Jean Dupont 09:30', time: '1h' },
+    { id: 3, title: 'Résultats analyses: Marie Leblanc', time: '2j' }
+  ];
   const [showConsultationForm, setShowConsultationForm] = useState(false);
   const [showNewPatientForm, setShowNewPatientForm] = useState(false);
   const [showOrdonnanceForm, setShowOrdonnanceForm] = useState(false);
   const [showCertificatForm, setShowCertificatForm] = useState(false);
+  const [agendaFilterConfirmed, setAgendaFilterConfirmed] = useState(false);
 
   const stats = [
     { label: 'Rendez-vous aujourd\'hui', value: '12', icon: Calendar, color: 'blue', trend: '+2' },
@@ -60,7 +68,7 @@ export function DashboardMedecin({ user, onLogout }: DashboardMedecinProps) {
     { label: 'Taux de satisfaction', value: '96%', icon: TrendingUp, color: 'orange', trend: '+2%' }
   ];
 
-  const prochainRendezVous = [
+  const [rdvs, setRdvs] = useState([
     { 
       id: 1,
       heure: '09:00', 
@@ -111,7 +119,7 @@ export function DashboardMedecin({ user, onLogout }: DashboardMedecinProps) {
       statut: 'confirmé',
       telephone: '06 56 78 90 12'
     }
-  ];
+  ]);
 
   const patients = [
     {
@@ -166,6 +174,64 @@ export function DashboardMedecin({ user, onLogout }: DashboardMedecinProps) {
     }
   ];
 
+  function openPatientFromRdv(rdv: any) {
+    // Create a lightweight patient object from the rdv entry
+    const names = rdv.patient.split(' ');
+    const patient = {
+      id: `rdv-${rdv.id}`,
+      prenom: names[0] || rdv.patient,
+      nom: names.slice(1).join(' ') || '',
+      age: rdv.age || 0,
+      dernierRdv: '',
+      prochainRdv: `Aujourd\'hui ${rdv.heure}`,
+      pathologies: [],
+      statut: 'actif'
+    };
+    setSelectedPatient(patient);
+    setShowPatientDetail(true);
+  }
+
+  function ensureSelectedPatient() {
+    if (!selectedPatient) {
+      // fallback to first patient in the list
+      const p = patients[0] || null;
+      if (p) {
+        setSelectedPatient(p);
+        setShowPatientDetail(true);
+      }
+      return p;
+    }
+    return selectedPatient;
+  }
+
+  function downloadRdvsCsv() {
+    const header = ['heure','patient','age','motif','type','statut','telephone'];
+    const rows = rdvs.map((r: any) => [r.heure, `"${r.patient}"`, r.age, `"${r.motif}"`, r.type, r.statut, r.telephone].join(','));
+    const csv = [header.join(','), ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'planning.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function addRdvAt(time: string) {
+    const nextId = rdvs.length ? Math.max(...rdvs.map((r:any) => r.id)) + 1 : 1;
+    const newRdv = {
+      id: nextId,
+      heure: time,
+      patient: 'RDV libre',
+      age: 0,
+      motif: 'Créneau réservé',
+      type: 'Créneau',
+      statut: 'libre',
+      telephone: ''
+    };
+    setRdvs(prev => [...prev, newRdv]);
+  }
+
   const alertesMedicales = [
     { patient: 'Jean Dupont', alerte: 'Renouvellement ordonnance diabète', priorite: 'haute' },
     { patient: 'Marie Leblanc', alerte: 'Résultats analyses à vérifier', priorite: 'moyenne' },
@@ -201,11 +267,26 @@ export function DashboardMedecin({ user, onLogout }: DashboardMedecinProps) {
               <p className="text-sm text-slate-600">Médecin généraliste</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="relative">
-              <Bell className="w-5 h-5" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
-            </Button>
+          <div className="flex items-center gap-2 relative">
+            <div className="relative">
+              <Button variant="ghost" size="icon" className="relative" onClick={() => setNotificationsOpen(v => !v)}>
+                <Bell className="w-5 h-5" />
+                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
+              </Button>
+              {notificationsOpen && (
+                <div className="absolute right-0 mt-2 w-72 bg-white border rounded-lg shadow-lg z-50 overflow-hidden">
+                  <div className="p-2 border-b text-sm font-medium">Notifications</div>
+                  <div className="max-h-64 overflow-auto">
+                    {notifications.map(n => (
+                      <div key={n.id} className="px-3 py-2 hover:bg-slate-50 cursor-default">
+                        <div className="text-sm text-slate-900">{n.title}</div>
+                        <div className="text-xs text-slate-500">{n.time}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
             <Button variant="ghost" onClick={onLogout} size="icon" className="md:w-auto md:px-4">
               <LogOut className="w-5 h-5" />
               <span className="hidden md:inline ml-2">Déconnexion</span>
@@ -269,24 +350,25 @@ export function DashboardMedecin({ user, onLogout }: DashboardMedecinProps) {
                 className="lg:col-span-2"
               >
                 <Card className="border-none shadow-lg">
-                  <CardHeader className="flex flex-row items-center justify-between">
+                    <CardHeader className="flex flex-row items-center justify-between">
                     <CardTitle className="flex items-center gap-2">
                       <Clock className="w-5 h-5 text-blue-600" />
                       Prochains rendez-vous
                     </CardTitle>
-                    <Button size="sm" variant="ghost">
+                    <Button size="sm" variant="ghost" onClick={() => setActiveTab('agenda')}>
                       Tout voir
                     </Button>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-2">
-                      {prochainRendezVous.slice(0, 4).map((rdv, index) => (
+                      {rdvs.slice(0, 4).map((rdv, index) => (
                         <motion.div
                           key={rdv.id}
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: 0.2 + index * 0.05 }}
                           className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer group"
+                          onClick={() => { openPatientFromRdv(rdv); }}
                         >
                           <div className="flex items-center gap-3 flex-1">
                             <div className="w-12 text-center shrink-0">
@@ -302,11 +384,11 @@ export function DashboardMedecin({ user, onLogout }: DashboardMedecinProps) {
                               <p className="text-sm text-slate-600 truncate">{rdv.motif}</p>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2 ml-14 sm:ml-0">
+                            <div className="flex items-center gap-2 ml-14 sm:ml-0">
                             <Badge variant={rdv.statut === 'confirmé' ? 'default' : 'secondary'}>
                               {rdv.statut}
                             </Badge>
-                            <Button size="sm" variant="ghost" className="opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button size="sm" variant="ghost" className="opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => { e.stopPropagation(); openPatientFromRdv(rdv); }}>
                               Voir
                               <ChevronRight className="w-4 h-4 ml-1" />
                             </Button>
@@ -333,7 +415,7 @@ export function DashboardMedecin({ user, onLogout }: DashboardMedecinProps) {
                   <CardContent className="space-y-2">
                     <Button 
                       className="w-full justify-start bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
-                      onClick={() => setShowConsultationForm(true)}
+                      onClick={() => { ensureSelectedPatient(); setShowConsultationForm(true); }}
                     >
                       <Plus className="w-4 h-4 mr-2" />
                       Nouvelle consultation
@@ -349,7 +431,7 @@ export function DashboardMedecin({ user, onLogout }: DashboardMedecinProps) {
                     <Button 
                       className="w-full justify-start" 
                       variant="outline"
-                      onClick={() => setShowOrdonnanceForm(true)}
+                      onClick={() => { ensureSelectedPatient(); setShowOrdonnanceForm(true); }}
                     >
                       <Pill className="w-4 h-4 mr-2" />
                       Créer une ordonnance
@@ -357,7 +439,7 @@ export function DashboardMedecin({ user, onLogout }: DashboardMedecinProps) {
                     <Button 
                       className="w-full justify-start" 
                       variant="outline"
-                      onClick={() => setShowCertificatForm(true)}
+                      onClick={() => { ensureSelectedPatient(); setShowCertificatForm(true); }}
                     >
                       <FileCheck className="w-4 h-4 mr-2" />
                       Créer un certificat
@@ -403,20 +485,21 @@ export function DashboardMedecin({ user, onLogout }: DashboardMedecinProps) {
                   <CardHeader className="flex flex-row items-center justify-between">
                     <CardTitle>Planning du jour - 24 Novembre 2025</CardTitle>
                     <div className="flex gap-2">
-                      <Button size="sm" variant="outline">
+                      <Button size="sm" variant={agendaFilterConfirmed ? 'default' : 'outline'} onClick={() => setAgendaFilterConfirmed(s => !s)}>
                         <Filter className="w-4 h-4" />
                       </Button>
-                      <Button size="sm" variant="outline">
+                      <Button size="sm" variant="outline" onClick={downloadRdvsCsv}>
                         <Download className="w-4 h-4" />
                       </Button>
                     </div>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-1">
-                      {prochainRendezVous.map((rdv, index) => (
+                      {(agendaFilterConfirmed ? rdvs.filter((r:any) => r.statut === 'confirmé') : rdvs).map((rdv, index) => (
                         <div 
                           key={rdv.id}
                           className="flex items-start gap-4 p-4 border-l-4 border-blue-500 bg-blue-50/50 rounded-r-xl hover:bg-blue-50 transition-colors cursor-pointer"
+                          onClick={() => { openPatientFromRdv(rdv); }}
                         >
                           <div className="w-16 shrink-0">
                             <p className="text-blue-700">{rdv.heure}</p>
@@ -437,7 +520,7 @@ export function DashboardMedecin({ user, onLogout }: DashboardMedecinProps) {
                               </span>
                             </div>
                           </div>
-                          <Button size="sm">Démarrer</Button>
+                          <Button size="sm" onClick={(e) => { e.stopPropagation(); openPatientFromRdv(rdv); setShowPatientDetail(false); setShowConsultationForm(true); }}>Démarrer</Button>
                         </div>
                       ))}
                     </div>
@@ -452,13 +535,13 @@ export function DashboardMedecin({ user, onLogout }: DashboardMedecinProps) {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-2">
-                      <Button className="w-full justify-start" variant="outline">
+                      <Button className="w-full justify-start" variant="outline" onClick={() => addRdvAt('14:00 - 14:30')}>
                         14:00 - 14:30
                       </Button>
-                      <Button className="w-full justify-start" variant="outline">
+                      <Button className="w-full justify-start" variant="outline" onClick={() => addRdvAt('15:00 - 15:30')}>
                         15:00 - 15:30
                       </Button>
-                      <Button className="w-full justify-start" variant="outline">
+                      <Button className="w-full justify-start" variant="outline" onClick={() => addRdvAt('16:30 - 17:00')}>
                         16:30 - 17:00
                       </Button>
                     </div>
@@ -502,12 +585,12 @@ export function DashboardMedecin({ user, onLogout }: DashboardMedecinProps) {
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  {patients.map((patient) => (
+                    {patients.map((patient) => (
                     <motion.div
                       key={patient.id}
                       whileHover={{ scale: 1.01 }}
                       className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
-                      onClick={() => setSelectedPatient(patient)}
+                      onClick={() => { setSelectedPatient(patient); setShowPatientDetail(true); }}
                     >
                       <Avatar className="w-12 h-12">
                         <AvatarFallback className="bg-purple-100 text-purple-700">
@@ -538,13 +621,13 @@ export function DashboardMedecin({ user, onLogout }: DashboardMedecinProps) {
                         )}
                       </div>
                       <div className="flex gap-2 ml-16 sm:ml-0">
-                        <Button size="sm" variant="ghost">
+                        <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); setSelectedPatient(patient); setShowPatientDetail(true); }}>
                           <FileText className="w-4 h-4" />
                         </Button>
-                        <Button size="sm" variant="ghost">
+                        <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); setSelectedPatient(patient); setShowPatientDetail(false); setShowConsultationForm(true); }}>
                           <Stethoscope className="w-4 h-4" />
                         </Button>
-                        <Button size="sm" variant="ghost">
+                        <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); setSelectedPatient(patient); setShowPatientDetail(true); }}>
                           <ChevronRight className="w-4 h-4" />
                         </Button>
                       </div>
@@ -729,11 +812,11 @@ export function DashboardMedecin({ user, onLogout }: DashboardMedecinProps) {
 
       {/* Modals */}
       <AnimatePresence>
-        {selectedPatient && !showConsultationForm && (
+        {selectedPatient && showPatientDetail && !showConsultationForm && !showOrdonnanceForm && !showCertificatForm && !showNewPatientForm && (
           <PatientDetail
             patient={selectedPatient}
-            onClose={() => setSelectedPatient(null)}
-            onStartConsultation={() => setShowConsultationForm(true)}
+            onClose={() => { setSelectedPatient(null); setShowPatientDetail(false); }}
+            onStartConsultation={() => { setShowConsultationForm(true); setShowPatientDetail(false); }}
           />
         )}
         

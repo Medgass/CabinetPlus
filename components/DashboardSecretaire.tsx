@@ -45,6 +45,11 @@ export function DashboardSecretaire({
 }: DashboardSecretaireProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [showNewRDV, setShowNewRDV] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const notifications = [
+    { id: 1, title: 'Nouveau patient ajouté', time: '10m' },
+    { id: 2, title: 'Rappel: RDV à 11:30 Sophie Rousseau', time: '2h' }
+  ];
   const [newRDV, setNewRDV] = useState({
     patient: "",
     telephone: "",
@@ -176,15 +181,26 @@ export function DashboardSecretaire({
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="relative"
-            >
-              <Bell className="w-5 h-5" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
-            </Button>
+          <div className="flex items-center gap-2 relative">
+            <div className="relative">
+              <Button variant="ghost" size="icon" className="relative" onClick={() => setNotificationsOpen(v => !v)}>
+                <Bell className="w-5 h-5" />
+                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
+              </Button>
+              {notificationsOpen && (
+                <div className="absolute right-0 mt-2 w-72 bg-white border rounded-lg shadow-lg z-50 overflow-hidden">
+                  <div className="p-2 border-b text-sm font-medium">Notifications</div>
+                  <div className="max-h-64 overflow-auto">
+                    {notifications.map(n => (
+                      <div key={n.id} className="px-3 py-2 hover:bg-slate-50 cursor-default">
+                        <div className="text-sm text-slate-900">{n.title}</div>
+                        <div className="text-xs text-slate-500">{n.time}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
             <Button variant="ghost" onClick={onLogout}>
               <LogOut className="w-5 h-5" />
             </Button>
